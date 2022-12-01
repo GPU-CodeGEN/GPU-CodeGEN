@@ -9,6 +9,11 @@
 #include <random>
 #include <math.h>
 
+#define NUM_PROFILES 512
+#define M 128
+#define K 64
+#define N 256
+
 using namespace std;
 
 template <typename ValueType>
@@ -29,9 +34,9 @@ int main()
 {
     // Perform matrix multiplication C = A*B
     int m, k, n;
-    m = 42;
-    k = 67;
-    n = 33;
+    m = M;
+    k = K;
+    n = N;
     std::default_random_engine generator;
 
     // Allocate memory on the host
@@ -50,8 +55,24 @@ int main()
     d_A.set(&h_A[0], m * k);
     d_B.set(&h_B[0], k * n);
 
-    matrixMultiplication(m, k, n, d_A.getData(), d_B.getData(), d_C.getData());
-    cudaDeviceSynchronize();
+    float matmul_ms_avg = 0.0f;
+    for(int iter=0; iter<NUM_PROFILES; ++iter) {
+        float matmul_ms = 0.0f;
+        cudaEvent_t matmul_start;
+        cudaEvent_t matmul_end;
+        cudaEventCreate(&matmul_start);
+        cudaEventCreate(&matmul_end);
+        cudaEventRecord(matmul_start);
+        matrixMultiplication(m, k, n, d_A.getData(), d_B.getData(), d_C.getData());
+        cudaDeviceSynchronize();
+        cudaEventRecord(matmul_end);
+        cudaEventSynchronize(matmul_end);
+        cudaEventElapsedTime(&matmul_ms, matmul_start, matmul_end);
+        cudaEventDestroy(matmul_start);
+        cudaEventDestroy(matmul_end);
+        matmul_ms_avg += matmul_ms;
+    }
+    std::cout << "Average MatMul time: " << matmul_ms_avg / NUM_PROFILES << " ms" << std::endl;
 
     d_C.get(&h_C[0], m * n);
     cudaDeviceSynchronize();
@@ -95,7 +116,7 @@ int main()
     //     cout << endl;
     // }
 
-    cout << endl;
+    // cout << endl;
 
     cout << "Error: " << err << endl;
 

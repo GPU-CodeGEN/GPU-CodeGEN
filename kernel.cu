@@ -45,7 +45,7 @@ __global__ void matrixMultiplicationKernel(int m, int k, int n, float* A, float*
         C[row*n+col] = Cvalue;
 }
 
-void matrixMultiplication(int m, int k, int n, float *A, float *B, float *C){
+cudaError_t matrixMultiplication(int m, int k, int n, float *A, float *B, float *C){
 
     // declare the number of blocks per grid and the number of threads per block
     // use 1 to 512 threads per block
@@ -53,4 +53,6 @@ void matrixMultiplication(int m, int k, int n, float *A, float *B, float *C){
     dim3 blocksPerGrid((m + threadsPerBlock.x - 1) / threadsPerBlock.x, (n + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
     matrixMultiplicationKernel<<<blocksPerGrid,threadsPerBlock>>>(m, k, n, A, B, C);
+    
+    return cudaGetLastError();
 }
